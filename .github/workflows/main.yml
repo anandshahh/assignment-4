@@ -1,43 +1,40 @@
-name: Deploy to Amazon ECR
- 
+name: Deploy to Amazon ECR Public
+
 on:
   push:
     branches:
       - main
- 
+
 jobs:
   build-and-push:
-    name: Build and Push to Amazon ECR
+    name: Build and Push to Amazon ECR Public
     runs-on: ubuntu-latest
- 
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
- 
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2 # or your AWS region
- 
+          aws-region: us-east-2 # AWS region is still needed for AWS CLI commands, but not for ECR Public login
+
       - name: Login to Amazon ECR Public
         id: login-ecr-public
         uses: aws-actions/amazon-ecr-login@v1
         with:
-          # Ensure we're using the ECR Public login endpoint
           registry-type: public
- 
+
       - name: Build, tag, and push image to Amazon ECR Public
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr-public.outputs.registry }}
+          ECR_REGISTRY: public.ecr.aws/p6v8j1i8 # Your ECR Public registry alias
           ECR_REPOSITORY: assign-4 # your ECR public repository name
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # Build a docker container and push it to ECR so that it can
-          # be deployed to ECS. Make sure you're using the correct URI for the public registry.
-          docker build -t public.ecr.aws/p6v8j1i8/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push public.ecr.aws/p6v8j1i8/$ECR_REPOSITORY:$IMAGE_TAG
-          # If you want to use the 'latest' tag, you can also push that.
-          docker tag public.ecr.aws/p6v8j1i8/$ECR_REPOSITORY:$IMAGE_TAG public.ecr.aws/p6v8j1i8/$ECR_REPOSITORY:latest
-          docker push public.ecr.aws/p6v8j1i8/$ECR_REPOSITORY:latest
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          # Tagging the image as 'latest' and pushing that tag as well
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
